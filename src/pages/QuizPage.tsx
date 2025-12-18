@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchQuiz, Question, Difficulty } from "../services/api";
-import { addQuizResult } from "../services/userService";
+import { addQuizResult, QuizResult } from '../services/userService';
 
 type QuizState = "loading" | "ready" | "finished" | "error";
 
@@ -14,28 +14,34 @@ const QuizPage = () => {
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
+  const [answers, setAnswers] = useState<{ questionId: string; selectedOption: number }[]>([]);
 
-  // ✅ category / difficulty change → quiz reload
+  // Load quiz on category/difficulty change
   useEffect(() => {
     setStatus("loading");
-
     fetchQuiz(category, difficulty)
       .then((data) => {
         setQuestions(data);
         setCurrentIndex(0);
         setScore(0);
         setSelected(null);
+        setAnswers([]);
         setStatus(data.length ? "ready" : "error");
       })
       .catch(() => setStatus("error"));
   }, [category, difficulty]);
 
-  // ✅ save result when finished
+  // Save result when finished
   useEffect(() => {
     if (status === "finished") {
-      addQuizResult(score);
+      const result: QuizResult = {
+        quizId: `${category}-${difficulty}-${Date.now()}`,
+        score,
+        answers,
+      };
+      addQuizResult(result).catch(console.error);
     }
-  }, [status, score]);
+  }, [status, score, answers, category, difficulty]);
 
   const current = questions[currentIndex];
 
@@ -46,10 +52,18 @@ const QuizPage = () => {
   const handleNext = () => {
     if (!current || selected === null) return;
 
+    // Save answer (convert questionId to string to fix TS error)
+    setAnswers((prev) => [
+      ...prev,
+      { questionId: current.id.toString(), selectedOption: selected },
+    ]);
+
+    // Update score
     if (selected === current.correctOptionId) {
       setScore((prev) => prev + 1);
     }
 
+    // Move to next question or finish
     if (currentIndex === questions.length - 1) {
       setStatus("finished");
     } else {
@@ -58,7 +72,6 @@ const QuizPage = () => {
     }
   };
 
-  // 🔄 Loading
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -67,7 +80,6 @@ const QuizPage = () => {
     );
   }
 
-  // ❌ Error
   if (status === "error") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -78,7 +90,6 @@ const QuizPage = () => {
     );
   }
 
-  // 🎉 Finished
   if (status === "finished") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -86,16 +97,15 @@ const QuizPage = () => {
           <h1 className="text-2xl font-semibold mb-4">
             {category.toUpperCase()} Quiz ({difficulty})
           </h1>
-
           <p className="text-lg mb-2">
             You scored <b>{score}</b> out of <b>{questions.length}</b>
           </p>
-
           <button
             onClick={() => {
               setCurrentIndex(0);
               setScore(0);
               setSelected(null);
+              setAnswers([]);
               setStatus("ready");
             }}
             className="mt-6 inline-flex items-center justify-center rounded-full bg-emerald-500 px-6 py-2 text-white font-medium hover:bg-emerald-600"
@@ -107,17 +117,14 @@ const QuizPage = () => {
     );
   }
 
-  // 🧠 Quiz UI
+  // Quiz UI
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-8">
         {/* Header */}
         <header className="mb-4">
-          <p className="text-xs font-medium text-emerald-600">
-            {category.toUpperCase()} Quiz
-          </p>
+          <p className="text-xs font-medium text-emerald-600">{category.toUpperCase()} Quiz</p>
 
-          {/* Difficulty selector */}
           <div className="mt-2 flex gap-2">
             {(["easy", "medium", "hard"] as Difficulty[]).map((lvl) => (
               <button
@@ -141,21 +148,16 @@ const QuizPage = () => {
             <span className="text-xs text-slate-500">Score: {score}</span>
           </div>
 
-          {/* Progress bar */}
           <div className="mt-3 h-1.5 bg-slate-100 rounded-full">
             <div
               className="h-full rounded-full bg-emerald-500 transition-all"
-              style={{
-                width: `${((currentIndex + 1) / questions.length) * 100}%`,
-              }}
+              style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
             />
           </div>
         </header>
 
-        {/* Question */}
         <p className="mb-4 text-slate-800">{current.text}</p>
 
-        {/* Options */}
         <div className="space-y-2">
           {current.options.map((option) => (
             <button
@@ -172,7 +174,6 @@ const QuizPage = () => {
           ))}
         </div>
 
-        {/* Next / Finish */}
         <button
           onClick={handleNext}
           disabled={selected === null}

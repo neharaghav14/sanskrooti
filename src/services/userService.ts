@@ -1,89 +1,66 @@
 // src/services/userService.ts
-import { fetchQuiz, Question, Difficulty, Option } from "../services/api";
+import axios from "axios";
 
-export type UserStats = {
+// ------------------- Types -------------------
+export interface UserStats {
   name: string;
-  email?: string;
-  quizzesCompleted: number;
-  totalScore: number;
-  badges: string[];
-};
+  email: string;
+}
 
-const USER_KEY = "sanskrooti_user";
+export interface QuizResult {
+  quizId: string;
+  score: number;
+  answers: any[]; // adjust type if you have a specific answer structure
+}
 
-// ✅ Login ke baad jo user store karoge, usi ko read karega
-export const getUser = (): UserStats => {
-  const stored = localStorage.getItem(USER_KEY);
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
+// ------------------- User Functions -------------------
 
-      const user: UserStats = {
-        name: parsed.name ?? "Guest User",
-        email: parsed.email,
-        quizzesCompleted: parsed.quizzesCompleted ?? 0,
-        totalScore: parsed.totalScore ?? 0,
-        badges: parsed.badges ?? [],
-      };
+// Get currently logged-in user from backend using token from localStorage
+export const getUser = async (): Promise<UserStats | null> => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
 
-      return user;
-    } catch {
-      // agar parse fail ho gaya to niche default user create karenge
-    }
+  try {
+    const res = await axios.get<UserStats>("https://your-backend.com/api/user/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data;
+  } catch (err: unknown) {
+    if (err instanceof Error) console.error(err.message);
+    else console.error(err);
+    return null;
   }
-
-  // default user (agar login nahi hua / corrupt data)
-  const defaultUser: UserStats = {
-    name: "Guest User",
-    quizzesCompleted: 0,
-    totalScore: 0,
-    badges: [],
-  };
-
-  localStorage.setItem(USER_KEY, JSON.stringify(defaultUser));
-  return defaultUser;
 };
 
-// ✅ kisi bhi jagah se user ko update karne ke liye
-export const updateUser = (data: Partial<UserStats>) => {
-  const user = getUser();
-  const updated: UserStats = { ...user, ...data };
-  localStorage.setItem(USER_KEY, JSON.stringify(updated));
-};
-
-// ✅ quiz complete hone ke baad score + badges update
-export const addQuizResult = (score: number) => {
-  const user = getUser();
-
-  const updatedBadges = [...user.badges];
-  if (score >= 5 && !updatedBadges.includes("Quiz Beginner")) {
-    updatedBadges.push("Quiz Beginner");
+// Save user token in localStorage (login)
+export const setLoggedInUser = (user: { name: string; email: string; token?: string }) => {
+  if (user.token) {
+    localStorage.setItem("token", user.token);
   }
-  if (
-    user.quizzesCompleted + 1 >= 3 &&
-    !updatedBadges.includes("Culture Explorer")
-  ) {
-    updatedBadges.push("Culture Explorer");
-  }
-
-  const updatedUser: UserStats = {
-    ...user,
-    quizzesCompleted: user.quizzesCompleted + 1,
-    totalScore: user.totalScore + score,
-    badges: updatedBadges,
-  };
-
-  localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
 };
 
-// ✅ helper: login ke baad backend se aaye user ko set karo
-export const setLoggedInUser = (backendUser: { name: string; email?: string }) => {
-  const current = getUser();
-  const merged: UserStats = {
-    ...current,
-    name: backendUser.name,
-    email: backendUser.email,
-  };
+// Clear user token from localStorage (logout)
+export const clearUser = () => {
+  localStorage.removeItem("token");
+};
 
-  localStorage.setItem(USER_KEY, JSON.stringify(merged));
+// ------------------- Quiz Functions -------------------
+
+// Add a quiz result for the logged-in user
+export const addQuizResult = async (result: QuizResult) => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("User not logged in");
+
+  try {
+    const res = await axios.post(
+      "https://your-backend.com/api/quiz/result",
+      result,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  } catch (err: unknown) {
+    if (err instanceof Error) console.error(err.message);
+    else console.error(err);
+    throw err;
+  }
 };
