@@ -1,5 +1,9 @@
+// src/services/userService.ts
+import { fetchQuiz, Question, Difficulty, Option } from "../services/api";
+
 export type UserStats = {
   name: string;
+  email?: string;
   quizzesCompleted: number;
   totalScore: number;
   badges: string[];
@@ -7,11 +11,28 @@ export type UserStats = {
 
 const USER_KEY = "sanskrooti_user";
 
+// ✅ Login ke baad jo user store karoge, usi ko read karega
 export const getUser = (): UserStats => {
   const stored = localStorage.getItem(USER_KEY);
-  if (stored) return JSON.parse(stored);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
 
-  // default user
+      const user: UserStats = {
+        name: parsed.name ?? "Guest User",
+        email: parsed.email,
+        quizzesCompleted: parsed.quizzesCompleted ?? 0,
+        totalScore: parsed.totalScore ?? 0,
+        badges: parsed.badges ?? [],
+      };
+
+      return user;
+    } catch {
+      // agar parse fail ho gaya to niche default user create karenge
+    }
+  }
+
+  // default user (agar login nahi hua / corrupt data)
   const defaultUser: UserStats = {
     name: "Guest User",
     quizzesCompleted: 0,
@@ -23,12 +44,14 @@ export const getUser = (): UserStats => {
   return defaultUser;
 };
 
+// ✅ kisi bhi jagah se user ko update karne ke liye
 export const updateUser = (data: Partial<UserStats>) => {
   const user = getUser();
-  const updated = { ...user, ...data };
+  const updated: UserStats = { ...user, ...data };
   localStorage.setItem(USER_KEY, JSON.stringify(updated));
 };
 
+// ✅ quiz complete hone ke baad score + badges update
 export const addQuizResult = (score: number) => {
   const user = getUser();
 
@@ -36,11 +59,14 @@ export const addQuizResult = (score: number) => {
   if (score >= 5 && !updatedBadges.includes("Quiz Beginner")) {
     updatedBadges.push("Quiz Beginner");
   }
-  if (user.quizzesCompleted + 1 >= 3 && !updatedBadges.includes("Culture Explorer")) {
+  if (
+    user.quizzesCompleted + 1 >= 3 &&
+    !updatedBadges.includes("Culture Explorer")
+  ) {
     updatedBadges.push("Culture Explorer");
   }
 
-  const updatedUser = {
+  const updatedUser: UserStats = {
     ...user,
     quizzesCompleted: user.quizzesCompleted + 1,
     totalScore: user.totalScore + score,
@@ -48,4 +74,16 @@ export const addQuizResult = (score: number) => {
   };
 
   localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+};
+
+// ✅ helper: login ke baad backend se aaye user ko set karo
+export const setLoggedInUser = (backendUser: { name: string; email?: string }) => {
+  const current = getUser();
+  const merged: UserStats = {
+    ...current,
+    name: backendUser.name,
+    email: backendUser.email,
+  };
+
+  localStorage.setItem(USER_KEY, JSON.stringify(merged));
 };

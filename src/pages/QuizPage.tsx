@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { fetchQuiz, Question } from "../services/api";
+import { fetchQuiz, Question, Difficulty } from "../services/api";
 import { addQuizResult } from "../services/userService";
 
 type QuizState = "loading" | "ready" | "finished" | "error";
@@ -13,12 +13,13 @@ const QuizPage = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
+  const [difficulty, setDifficulty] = useState<Difficulty>("easy");
 
-  /* 🔁 Fetch quiz when category changes */
+  // ✅ category / difficulty change → quiz reload
   useEffect(() => {
     setStatus("loading");
 
-    fetchQuiz(category)
+    fetchQuiz(category, difficulty)
       .then((data) => {
         setQuestions(data);
         setCurrentIndex(0);
@@ -27,9 +28,9 @@ const QuizPage = () => {
         setStatus(data.length ? "ready" : "error");
       })
       .catch(() => setStatus("error"));
-  }, [category]);
+  }, [category, difficulty]);
 
-  /* ✅ SAVE RESULT ONLY WHEN QUIZ FINISHES */
+  // ✅ save result when finished
   useEffect(() => {
     if (status === "finished") {
       addQuizResult(score);
@@ -57,7 +58,7 @@ const QuizPage = () => {
     }
   };
 
-  /* 🔄 Loading */
+  // 🔄 Loading
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -66,7 +67,7 @@ const QuizPage = () => {
     );
   }
 
-  /* ❌ Error */
+  // ❌ Error
   if (status === "error") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -77,13 +78,13 @@ const QuizPage = () => {
     );
   }
 
-  /* 🎉 Finished */
+  // 🎉 Finished
   if (status === "finished") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-8 text-center">
           <h1 className="text-2xl font-semibold mb-4">
-            {category.toUpperCase()} Quiz
+            {category.toUpperCase()} Quiz ({difficulty})
           </h1>
 
           <p className="text-lg mb-2">
@@ -106,7 +107,7 @@ const QuizPage = () => {
     );
   }
 
-  /* 🧠 Quiz UI */
+  // 🧠 Quiz UI
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-8">
@@ -116,13 +117,28 @@ const QuizPage = () => {
             {category.toUpperCase()} Quiz
           </p>
 
-          <div className="flex items-center justify-between mt-1">
+          {/* Difficulty selector */}
+          <div className="mt-2 flex gap-2">
+            {(["easy", "medium", "hard"] as Difficulty[]).map((lvl) => (
+              <button
+                key={lvl}
+                onClick={() => setDifficulty(lvl)}
+                className={`flex-1 rounded-full border px-2 py-1 text-xs font-medium capitalize ${
+                  difficulty === lvl
+                    ? "bg-emerald-500 text-white border-emerald-500"
+                    : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                {lvl}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between mt-3">
             <h1 className="text-lg font-semibold">
               Question {currentIndex + 1} of {questions.length}
             </h1>
-            <span className="text-xs text-slate-500">
-              Score: {score}
-            </span>
+            <span className="text-xs text-slate-500">Score: {score}</span>
           </div>
 
           {/* Progress bar */}

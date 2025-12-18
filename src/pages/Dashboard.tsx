@@ -1,16 +1,39 @@
+// src/pages/Dashboard.tsx
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getUser, UserStats } from "../services/userService";
-import { addQuizResult } from "../services/userService";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUser(getUser());
-  }, []);
+    // 1) token check
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
-  if (!user) return null;
+    // 2) central userService se user lao
+    const u = getUser();
+    if (!u) {
+      navigate("/login");
+      return;
+    }
+
+    setUser(u);
+    setLoading(false);
+  }, [navigate]);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading dashboard...</p>
+      </div>
+    );
+  }
 
   const progress = Math.min((user.quizzesCompleted / 10) * 100, 100);
 
@@ -27,7 +50,11 @@ const Dashboard = () => {
 
         {/* Stats */}
         <section className="grid md:grid-cols-3 gap-6 mb-10">
-          <StatCard title="Quizzes Completed" value={user.quizzesCompleted} icon="🧠" />
+          <StatCard
+            title="Quizzes Completed"
+            value={user.quizzesCompleted}
+            icon="🧠"
+          />
           <StatCard title="Total Score" value={user.totalScore} icon="⭐" />
           <StatCard title="Badges" value={user.badges.length} icon="🏆" />
         </section>
@@ -41,7 +68,9 @@ const Dashboard = () => {
               style={{ width: `${progress}%` }}
             ></div>
           </div>
-          <p className="text-sm mt-2 text-slate-600">{progress.toFixed(0)}%</p>
+          <p className="text-sm mt-2 text-slate-600">
+            {progress.toFixed(0)}%
+          </p>
         </div>
 
         {/* Badges */}

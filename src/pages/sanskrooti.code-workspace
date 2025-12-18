@@ -1,11 +1,10 @@
 {
-	"folders": [
-		{
-			"path": "../../.."
-		},
-		{
-			"path": "../../../../sanskrooti-api"
-		}
-	],
-	"settings": {}
+    "folders": [
+        {
+            "path": "../.."
+        },
+        {
+            "path": "../../../../sanskrooti-api/sanskrooti-api"
+        }
+    ]
 }

@@ -1,3 +1,7 @@
+// src/services/api.ts
+
+export type Difficulty = "easy" | "medium" | "hard";
+
 export type Option = {
   id: number;
   text: string;
@@ -6,17 +10,20 @@ export type Option = {
 export type Question = {
   id: number;
   category: string;
+  difficulty: Difficulty;
   text: string;
   options: Option[];
   correctOptionId: number;
 };
 
-const BASE_URL = "http://localhost:4000/api";
+const API_BASE = "http://localhost:4000/api";
 
-export async function fetchQuiz(category: string): Promise<Question[]> {
-  const res = await fetch(`${BASE_URL}/quiz/${category}`);
+export const fetchQuiz = async (category: string, difficulty: Difficulty) => {
+  const res = await fetch(
+    `${API_BASE}/quiz/${category}?difficulty=${difficulty}`
+  );
   if (!res.ok) {
-    throw new Error("Failed to fetch quiz");
+    throw new Error(`Failed to fetch quiz for ${category}`);
   }
-  return res.json();
-}
+  return (await res.json()) as Question[];
+};

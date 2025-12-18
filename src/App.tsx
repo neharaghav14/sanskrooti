@@ -9,6 +9,9 @@ import QuizPage from "./pages/QuizPage";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Stories from "./pages/Stories";
+import StoryDetail from "./pages/StoryDetail";
+
 
 function App() {
   return (
@@ -26,6 +29,9 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/stories" element={<Stories />} />
+            <Route path="/stories/:id" element={<StoryDetail />} />
+
           </Routes>
         </main>
         <Footer />
