@@ -16,15 +16,34 @@ export type Question = {
   correctOptionId: number;
 };
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://localhost:4000/api";
+/**
+ * IMPORTANT:
+ * API base URL comes ONLY from Vercel environment variable
+ * No localhost in production
+ */
+const API_BASE = import.meta.env.VITE_API_BASE as string;
 
-export const fetchQuiz = async (category: string, difficulty: Difficulty) => {
+if (!API_BASE) {
+  throw new Error("VITE_API_BASE is not defined");
+}
+
+export const fetchQuiz = async (
+  category: string,
+  difficulty: Difficulty
+): Promise<Question[]> => {
   const res = await fetch(
-    `${API_BASE}/quiz/${category}?difficulty=${difficulty}`
+    `${API_BASE}/quiz/${category}?difficulty=${difficulty}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
   );
+
   if (!res.ok) {
-    throw new Error(`Failed to fetch quiz for ${category}`);
+    throw new Error("Could not load quiz");
   }
-  return (await res.json()) as Question[];
+
+  return res.json();
 };

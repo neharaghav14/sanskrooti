@@ -1,6 +1,13 @@
 // src/services/userService.ts
 import axios from "axios";
 
+// ------------------- API BASE -------------------
+const API_BASE = import.meta.env.VITE_API_BASE as string;
+
+if (!API_BASE) {
+  throw new Error("VITE_API_BASE is not defined");
+}
+
 // ------------------- Types -------------------
 export interface UserStats {
   name: string;
@@ -10,57 +17,54 @@ export interface UserStats {
 export interface QuizResult {
   quizId: string;
   score: number;
-  answers: any[]; // adjust type if you have a specific answer structure
+  answers: any[];
 }
 
-// ------------------- User Functions -------------------
+// ------------------- Auth Helpers -------------------
+const getToken = () => localStorage.getItem("token");
 
-// Get currently logged-in user from backend using token from localStorage
+// ------------------- User Functions -------------------
 export const getUser = async (): Promise<UserStats | null> => {
-  const token = localStorage.getItem("token");
+  const token = getToken();
   if (!token) return null;
 
   try {
-    const res = await axios.get<UserStats>("https://your-backend.com/api/user/me", {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await axios.get<UserStats>(`${API_BASE}/user/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
     return res.data;
-  } catch (err: unknown) {
-    if (err instanceof Error) console.error(err.message);
-    else console.error(err);
+  } catch (err) {
+    console.error("Failed to fetch user", err);
     return null;
   }
 };
 
-// Save user token in localStorage (login)
-export const setLoggedInUser = (user: { name: string; email: string; token?: string }) => {
+export const setLoggedInUser = (user: {
+  name: string;
+  email: string;
+  token?: string;
+}) => {
   if (user.token) {
     localStorage.setItem("token", user.token);
   }
 };
 
-// Clear user token from localStorage (logout)
 export const clearUser = () => {
   localStorage.removeItem("token");
 };
 
-// ------------------- Quiz Functions -------------------
-
-// Add a quiz result for the logged-in user
+// ------------------- Quiz Result -------------------
 export const addQuizResult = async (result: QuizResult) => {
-  const token = localStorage.getItem("token");
+  const token = getToken();
   if (!token) throw new Error("User not logged in");
 
-  try {
-    const res = await axios.post(
-      "https://your-backend.com/api/quiz/result",
-      result,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return res.data;
-  } catch (err: unknown) {
-    if (err instanceof Error) console.error(err.message);
-    else console.error(err);
-    throw err;
-  }
+  const res = await axios.post(`${API_BASE}/quiz/result`, result, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return res.data;
 };
